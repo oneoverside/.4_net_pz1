@@ -1,162 +1,79 @@
-
+using System.Numerics;
 
 public class X
 {
-    public static string FindRoots(double[] coefficients)
+    public static List<Complex> FindRoots(double[] coefficients)
     {
-        var degree = coefficients.Length;
+        int degree = coefficients.Length - 1;
 
-        // Check if the equation is linear
-        if (degree == 1)
+        List<Complex> roots = new List<Complex>();
+
+        Complex initial = new Complex(0.4, 0.9); 
+        for (int i = 0; i < degree; i++)
         {
-            return Find1DegreeRoots(coefficients);
+            roots.Add(Complex.Pow(initial, i));
         }
 
-        // Check if the equation is quadratic
-        if (degree == 2)
+        // Итерации Durand-Kerner
+        const int MaxIterations = 1000;
+        for (int iteration = 0; iteration < MaxIterations; iteration++)
         {
-            return Find2DegreeRoots(coefficients);
-        }
-        
-        // Solve higher degree equations using Newton-Raphson method
-        else
-        {
-            var roots = new List<double>();
-
-            // Initial guess for roots
-            var initialGuess = GetInitialGuess(coefficients);
-
-            // Iterate for each root
-            for (var i = 0; i < degree; i++)
+            List<Complex> newRoots = new List<Complex>();
+            for (int i = 0; i < degree; i++)
             {
-                var guess = initialGuess[i];
-                var tolerance = 0.00001; // Adjust the tolerance as per your requirement
-                var root = FindRootUsingNewtonRaphson(coefficients, guess, tolerance);
+                Complex value = EvaluatePolynomial(coefficients, roots[i]);
+                Complex newValue = roots[i] - value / ComputeProduct(roots, i);
+                newRoots.Add(newValue);
+            }
 
-                if (!double.IsNaN(root))
+            bool converged = true;
+            for (int i = 0; i < degree; i++)
+            {
+                if (Complex.Abs(roots[i] - newRoots[i]) > 1e-10)
                 {
-                    roots.Add(root);
+                    converged = false;
+                    break;
                 }
             }
 
-            Console.WriteLine($"Roots: {string.Join(", " ,roots)};");
+            roots = newRoots;
+
+            if (converged)
+            {
+                break;
+            }
         }
+        
+        return roots.Select(x =>
+        {
+            var real = Math.Round(1 / x.Real, 3);
+            var complex = Math.Round(x.Imaginary, 3);
+            return new Complex(real, complex);
+        }).ToList();
     }
 
-    #region 1 Degree Solver
-
-    private static string Find1DegreeRoots(IReadOnlyList<double> coefficients)
+    private static Complex ComputeProduct(List<Complex> roots, int skipIndex)
     {
-        var root = -coefficients[0] / coefficients[1];
-        return $"One distinct real root: {root}";
-    }
-
-    #endregion // 1 Degree Solver
-
-    #region 2 Degree Solver
-
-    private static string Find2DegreeRoots(IReadOnlyList<double> coefficients)
-    {
-        var c = coefficients[0];
-        var b = coefficients[1];
-        var a = coefficients[2];
-        double discriminant = b * b - 4 * a * c;
-
-        if (discriminant > 0)
+        Complex result = 1;
+        for (int i = 0; i < roots.Count; i++)
         {
-            double root1 = (-b + Math.Sqrt(discriminant)) / (2 * a);
-            double root2 = (-b - Math.Sqrt(discriminant)) / (2 * a);
-            return $"Two distinct real roots: {root1} and {root2}";
+            if (i == skipIndex)
+            {
+                continue;
+            }
+
+            result *= (roots[skipIndex] - roots[i]);
         }
-        else if (discriminant == 0)
-        {
-            double root = -b / (2 * a);
-            return $"One real root: {root}";
-        }
-        else
-        {
-            double realPart = -b / (2 * a);
-            double imaginaryPart = Math.Sqrt(-discriminant) / (2 * a);
-            return $"Two complex roots: {realPart} + {imaginaryPart}i and {realPart} - {imaginaryPart}i";
-        }
-    }
-
-    #endregion // 2 Degree Solver
-
-    #region N Degree Solver
-
-    // Helper method to get initial guess for roots
-    private static double[] GetInitialGuess(double[] coefficients)
-    {
-        var degree = coefficients.Length - 1;
-        var initialGuess = new double[degree];
-
-        // Set initial guess to zero
-        for (var i = 0; i < degree; i++)
-        {
-            initialGuess[i] = 0;
-        }
-
-        return initialGuess;
-    }
-
-    // Helper method to find root using Newton-Raphson method
-    private static double FindRootUsingNewtonRaphson(double[] coefficients, double guess, double tolerance)
-    {
-        var derivativeTolerance = 0.00001; // Adjust the derivative tolerance as per your requirement
-
-        var fx = EvaluateEquation(coefficients, guess);
-        var dfx = EvaluateDerivative(coefficients, guess);
-        var maxIterations = 100; // Adjust the maximum number of iterations as per your requirement
-
-        var counter = 0;
-        while (Math.Abs(fx) > tolerance && Math.Abs(dfx) > derivativeTolerance && counter < maxIterations)
-        {
-            guess = guess - fx / dfx;
-            fx = EvaluateEquation(coefficients, guess);
-            dfx = EvaluateDerivative(coefficients, guess);
-
-            counter++;
-        }
-
-        // Check if root was found within the specified tolerance
-        if (Math.Abs(fx) <= tolerance)
-        {
-            return guess;
-        }
-        else
-        {
-            return double.NaN; // Return NaN if root was not found
-        }
-    }
-
-    // Helper method to evaluate the equation for a given value of x
-    private static double EvaluateEquation(double[] coefficients, double x)
-    {
-        var degree = coefficients.Length - 1;
-        double result = 0;
-
-        for (var i = 0; i <= degree; i++)
-        {
-            result += coefficients[i] * Math.Pow(x, degree - i);
-        }
-
         return result;
     }
 
-    // Helper method to evaluate the derivative of the equation for a given value of x
-    private static double EvaluateDerivative(double[] coefficients, double x)
+    private static Complex EvaluatePolynomial(double[] coefficients, Complex x)
     {
-        var degree = coefficients.Length - 1;
-        double result = 0;
-
-        for (var i = 0; i < degree; i++)
+        Complex result = 0;
+        for (int i = 0; i < coefficients.Length; i++)
         {
-            result += (degree - i) * coefficients[i] * Math.Pow(x, degree - i - 1);
+            result += coefficients[i] * Complex.Pow(x, i);
         }
-
         return result;
     }
-
-    #endregion // N Degree Solver
 }
