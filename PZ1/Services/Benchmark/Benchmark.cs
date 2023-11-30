@@ -25,12 +25,12 @@ public class PolynomialBenchmark
     [Benchmark]
     public void MyPolynomialResolverParallelBenchmark()
     { 
-        MyPolynomialResolverParallelFor.FindRoots(this._coefficients, 100);
+        MyPolynomialResolverParallelFor.FindRoots(this._coefficients, 10);
     }
     
     [Benchmark]
     public void MyPolynomialResolverParallelThreadBenchmark()
     { 
-        MyPolynomResolverParallelThread.FindRoots(this._coefficients, 100);
+        MyPolynomResolverParallelThread.FindRoots(this._coefficients, 10);
     }
 }
