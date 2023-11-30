@@ -7,7 +7,7 @@ namespace PZ1.Services.Resolvers;
 /// <summary>
 /// Provides functionality to resolve polynomial equations to find their roots.
 /// </summary>
-public abstract class MyPolynomialResolverParallel
+public abstract class MyPolynomialResolverParallelFor
 {
     #region Main Resolver Method
 
