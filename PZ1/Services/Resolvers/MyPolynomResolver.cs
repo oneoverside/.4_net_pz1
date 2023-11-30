@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Numerics;
 using PZ1.Extensions;
 
@@ -21,8 +22,8 @@ public abstract class MyPolynomialResolver
 
         List<Complex> roots = InitializeRoots(degree);
 
-        const int MaxIterations = 10;
-        for (int iteration = 0; iteration < MaxIterations; iteration++)
+        const int maxIterations = 10;
+        for (int iteration = 0; iteration < maxIterations; iteration++)
         {
             List<Complex> newRoots = ComputeNextRoots(coefficients, roots, degree);
 
@@ -35,7 +36,7 @@ public abstract class MyPolynomialResolver
             roots = newRoots;
         }
 
-        return $"Method did not converge after {MaxIterations} iterations.";
+        return $"Method did not converge after {maxIterations} iterations.";
     }
 
     #endregion // Main Resolver Method
@@ -75,6 +76,23 @@ public abstract class MyPolynomialResolver
             newRoots.Add(newValue);
         }
         return newRoots;
+    }
+    
+    /// <summary>
+    /// Computes the next set of polynomial roots.
+    /// </summary>
+    private static List<Complex> ComputeNextRootsParallel(IReadOnlyList<double> coefficients, IReadOnlyList<Complex> roots, int degree)
+    {
+        var newRoots = new ConcurrentBag<Complex>();
+
+        Parallel.For(0, degree, i =>
+        {
+            var value = EvaluatePolynomial(coefficients, roots[i]);
+            var newValue = roots[i] - value / ComputeProduct(roots, i);
+            newRoots.Add(newValue);
+        });
+
+        return newRoots.ToList();
     }
     
     /// <summary>
